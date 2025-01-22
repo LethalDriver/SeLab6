@@ -18,7 +18,6 @@ media
 
 # Environments
 se_lab_5/
-.env
 .venv
 env/
 venv/
