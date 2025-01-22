@@ -6,7 +6,32 @@ on:
       - master
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      db:
+        image: postgres:17
+        env:
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpassword
+          POSTGRES_DB: testdb
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v2
+
+      - name: Set up Docker
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y docker-compose
+
+      - name: Build and start Containers
+        run: docker-compose up --build -d
+
+      - name: Execute unit tests
+        run: docker exec $(docker-compose ps -q api) python myproject/manage.py test myproject/djangoapp/tests
+
   docs:
+    needs: test
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -17,25 +42,8 @@ jobs:
       - name: Set up environment
         uses: actions/setup-python@v2
         with:
-          python-version: 3.12 # Change to your Python version
+          python-version: 3.12
 
       - name: Install dependencies
         run: |
-          python -m venv venv
-          source venv/bin/activate
           pip install -r requirements.txt
-
-      - name: Generate API documentation
-        run: |
-          source venv/bin/activate
-          python myproject/manage.py generateschema > docs.json
-
-      - name: Commit and push documentation
-        run: |
-          git config --global user.mail "github-actions[bot]@users.noreply.github.com"
-          git config --global user.name "github-actions[bot]"
-          git add docs.json index.html
-          git commit -m "Updated documentation"
-          git push origin master
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
